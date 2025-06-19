@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TFA-WA Teacher Diversity Impact Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #6B2C91 0%, #9333EA 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header p {
+            font-size: 1.25rem;
+            color: #6b7280;
+        }
+        
+        .info-tooltip {
+            display: inline-block;
+            background: #e9d5ff;
+            color: #6b21a8;
+            padding: 0.125rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+            cursor: help;
+            position: relative;
+        }
+        
+        .info-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            z-index: 10;
+            margin-top: 0.5rem;
+            width: 280px;
+            white-space: normal;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(147, 51, 234, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .metric-card:hover::before {
+            left: 100%;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        
+        .metric-card.highlight {
+            background: linear-gradient(135deg, #6B2C91 0%, #9333EA 100%);
+            color: white;
+        }
+        
+        .metric-label {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+        }
+        
+        .metric-value {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-detail {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .metric-subdetail {
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .metric-subdetail span {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        
+        .arrow-indicator {
+            display: inline-block;
+            color: #10b981;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .impact-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .impact-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .impact-item:hover {
+            background: #e9d5ff;
+            transform: scale(1.05);
+        }
+        
+        .impact-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #6B2C91;
+            line-height: 1;
+        }
+        
+        .impact-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+        
+        .insights {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .insights h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+            color: #6B2C91;
+        }
+        
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border-radius: 12px;
+            transition: background 0.3s ease;
+        }
+        
+        .insight-item:hover {
+            background: #f9fafb;
+        }
+        
+        .insight-icon {
+            width: 40px;
+            height: 40px;
+            background: #e9d5ff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .insight-text {
+            flex: 1;
+        }
+        
+        .insight-text h3 {
+            font-size: 1.125rem;
+            margin-bottom: 0.25rem;
+            color: #1d1d1f;
+        }
+        
+        .insight-text p {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+        
+        .comparison-section {
+            margin: 2rem 0;
+        }
+        
+        .comparison-bar {
+            display: flex;
+            align-items: center;
+            margin: 1rem 0;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .bar-label {
+            width: 180px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .bar-track {
+            flex: 1;
+            height: 40px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e9d5ff 0%, #9333EA 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 1rem;
+            color: white;
+            font-weight: 600;
+            transition: width 1s ease-out;
+            position: relative;
+        }
+        
+        .bar-fill.tfa {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        }
+        
+        .alumni-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .alumni-stat {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .alumni-stat:hover {
+            background: #e9d5ff;
+            transform: translateY(-2px);
+        }
+        
+        .alumni-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #6B2C91;
+        }
+        
+        .alumni-role {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        @media (max-width: 768px) {
+            .metric-value {
+                font-size: 2rem;
+            }
+            .bar-label {
+                width: 120px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>TFA-WA Teacher Diversity Impact Dashboard</h1>
+            <p>Demonstrating TFA-WA's Critical Role in Diversifying Washington's Teaching Force</p>
+        </div>
+        
+        <div class="metrics-grid">
+            <div class="metric-card" onclick="highlightMetric(this)">
+                <div class="metric-label">Traditional Programs</div>
+                <div class="metric-value">33.7%</div>
+                <div class="metric-detail">Teachers of Color</div>
+            </div>
+            
+            <div class="metric-card" onclick="highlightMetric(this)">
+                <div class="metric-label">Alternative Routes</div>
+                <div class="metric-value">38.0%</div>
+                <div class="metric-detail">Teachers of Color</div>
+            </div>
+            
+            <div class="metric-card highlight" onclick="highlightMetric(this)">
+                <div class="metric-label">TFA-WA Corps Members</div>
+                <div class="metric-value">56%</div>
+                <div class="metric-detail">Teachers of Color
+                    <span class="arrow-indicator">↑ 66% higher</span>
+                    <span class="info-tooltip" data-tooltip="Teachers of Color includes: Asian, Black/African American, Hispanic/Latino, American Indian/Alaska Native, Native Hawaiian/Pacific Islander, and Two or More Races">?</span>
+                </div>
+                <div class="metric-subdetail">
+                    <span>• 48% first-generation college</span>
+                    <span>• 56% from low-income background</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h2 class="chart-title">Teacher Diversity Across Washington Preparation Programs</h2>
+            <canvas id="diversityChart" height="100"></canvas>
+        </div>
+        
+        <div class="chart-container">
+            <h2 class="chart-title">TFA-WA's Statewide Impact</h2>
+            <div class="impact-metrics">
+                <div class="impact-item">
+                    <div class="impact-number">65,000</div>
+                    <div class="impact-label">Students impacted daily</div>
+                </div>
+                <div class="impact-item">
+                    <div class="impact-number">26</div>
+                    <div class="impact-label">Current corps members</div>
+                </div>
+                <div class="impact-item">
+                    <div class="impact-number">1,429+</div>
+                    <div class="impact-label">Alumni across WA</div>
+                </div>
+                <div class="impact-item">
+                    <div class="impact-number">+23</div>
+                    <div class="impact-label">Additional learning days/year</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h2 class="chart-title">Diversity Leadership Comparison</h2>
+            <div class="comparison-section">
+                <div class="comparison-bar" onclick="animateBar(this)">
+                    <div class="bar-label">State Average (All)</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width: 60%" data-width="60">34.5%</div>
+                    </div>
+                </div>
+                <div class="comparison-bar" onclick="animateBar(this)">
+                    <div class="bar-label">Traditional Programs</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width: 60%" data-width="60">33.7%</div>
+                    </div>
+                </div>
+                <div class="comparison-bar" onclick="animateBar(this)">
+                    <div class="bar-label">Alternative Routes</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width: 68%" data-width="68">38.0%</div>
+                    </div>
+                </div>
+                <div class="comparison-bar" onclick="animateBar(this)">
+                    <div class="bar-label">UW-Seattle Alt Route</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width: 87%" data-width="87">49.0%</div>
+                    </div>
+                </div>
+                <div class="comparison-bar" onclick="animateBar(this)">
+                    <div class="bar-label">TFA-WA Corps</div>
+                    <div class="bar-track">
+                        <div class="bar-fill tfa" style="width: 100%" data-width="100">56.0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h2 class="chart-title">TFA-WA Alumni: Sustained Educational Leadership</h2>
+            <div class="alumni-grid">
+                <div class="alumni-stat">
+                    <div class="alumni-number">455</div>
+                    <div class="alumni-role">Teachers</div>
+                </div>
+                <div class="alumni-stat">
+                    <div class="alumni-number">20</div>
+                    <div class="alumni-role">Principals</div>
+                </div>
+                <div class="alumni-stat">
+                    <div class="alumni-number">46</div>
+                    <div class="alumni-role">Mid-level Leaders</div>
+                </div>
+                <div class="alumni-stat">
+                    <div class="alumni-number">45</div>
+                    <div class="alumni-role">System Leaders</div>
+                </div>
+                <div class="alumni-stat">
+                    <div class="alumni-number">86</div>
+                    <div class="alumni-role">Nonprofit Leaders</div>
+                </div>
+                <div class="alumni-stat">
+                    <div class="alumni-number">48</div>
+                    <div class="alumni-role">Government Workers</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="insights">
+            <h2>Key Insights for Board Consideration</h2>
+            
+            <div class="insight-item" onclick="expandInsight(this)">
+                <div class="insight-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2C91" stroke-width="2">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z"></path>
+                        <path d="M2 17L12 22L22 17"></path>
+                        <path d="M2 12L12 17L22 12"></path>
+                    </svg>
+                </div>
+                <div class="insight-text">
+                    <h3>Unmatched Diversity Leadership</h3>
+                    <p>TFA-WA delivers 56% teachers of color—66% higher than traditional programs and 47% higher than other alternative routes. This positions TFA-WA as the state's most effective pipeline for diversifying the teaching workforce.</p>
+                </div>
+            </div>
+            
+            <div class="insight-item" onclick="expandInsight(this)">
+                <div class="insight-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2C91" stroke-width="2">
+                        <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21V19C22.9993 17.1137 22.2044 15.3052 20.7877 14"></path>
+                        <path d="M16 3.13C16.8604 3.35 17.623 3.85 18.1676 4.55C18.7122 5.25 19.0078 6.12 19.0078 7C19.0078 7.88 18.7122 8.75 18.1676 9.45"></path>
+                    </svg>
+                </div>
+                <div class="insight-text">
+                    <h3>Holistic Diversity Approach</h3>
+                    <p>Beyond racial diversity, TFA-WA brings socioeconomic diversity with 48% first-generation college students and 56% from low-income backgrounds, ensuring teachers who deeply understand student challenges.</p>
+                </div>
+            </div>
+            
+            <div class="insight-item" onclick="expandInsight(this)">
+                <div class="insight-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2C91" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                </div>
+                <div class="insight-text">
+                    <h3>Proven Academic Impact</h3>
+                    <p>Research shows TFA corps members increase student achievement by approximately 23 additional days of learning per year, with alumni improving at double the rate of non-TFA teachers over their first five years.</p>
+                </div>
+            </div>
+            
+            <div class="insight-item" onclick="expandInsight(this)">
+                <div class="insight-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2C91" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M8 14S9.5 16 12 16 16 14 16 14"></path>
+                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                    </svg>
+                </div>
+                <div class="insight-text">
+                    <h3>Scalable Solution for Urgent Need</h3>
+                    <p>With 88% of Washington students aspiring to postsecondary education but significant achievement gaps for students of color, TFA-WA offers a proven, scalable model to address both teacher shortages and diversity needs simultaneously.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Interactive functions
+        function highlightMetric(element) {
+            element.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                element.style.transform = 'scale(1)';
+            }, 300);
+        }
+        
+        function animateBar(barContainer) {
+            const bar = barContainer.querySelector('.bar-fill');
+            const originalWidth = bar.getAttribute('data-width');
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = originalWidth + '%';
+            }, 100);
+        }
+        
+        function expandInsight(element) {
+            element.style.background = '#e9d5ff';
+            setTimeout(() => {
+                element.style.background = '';
+            }, 500);
+        }
+        
+        // Animate bars on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.querySelectorAll('.bar-fill').forEach(bar => {
+                    bar.style.width = '0%';
+                    setTimeout(() => {
+                        bar.style.width = bar.getAttribute('data-width') + '%';
+                    }, 100);
+                });
+            }, 500);
+        });
+        
+        // Create diversity comparison chart
+        const ctx = document.getElementById('diversityChart').getContext('2d');
+        const diversityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Traditional Programs', 'All Alternative Routes', 'UW-Seattle Alt Route', 'TFA-WA Corps'],
+                datasets: [{
+                    label: 'Teachers of Color (%)',
+                    data: [33.7, 38.0, 49.0, 56.0],
+                    backgroundColor: [
+                        'rgba(107, 114, 128, 0.8)',
+                        'rgba(147, 51, 234, 0.6)',
+                        'rgba(147, 51, 234, 0.8)',
+                        'rgba(16, 185, 129, 0.9)'
+                    ],
+                    borderRadius: 8,
+                    barThickness: 80
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const value = diversityChart.data.datasets[0].data[index];
+                        alert(`${diversityChart.data.labels[index]}: ${value}% Teachers of Color`);
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + '% Teachers of Color';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 70,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Add hover effect to impact items
+        document.querySelectorAll('.impact-item').forEach(item => {
+            item.addEventListener('click', function() {
+                this.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1.05)';
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html>
